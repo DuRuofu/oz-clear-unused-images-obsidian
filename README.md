@@ -128,4 +128,9 @@ npm run build     # 产物 main.js 生成在仓库根目录
 
 ## License
 
-MIT License（沿用上游 `package.json` 的声明），原始版权归作者 **Ozan** 所有；本 Fork 的修改同样以 MIT License 发布。
+[MIT License](LICENSE)。
+
+- 原始版权归原作者 **Ozan** 所有（2021，[ozntel/oz-clear-unused-images-obsidian](https://github.com/ozntel/oz-clear-unused-images-obsidian)）；
+- 本 Fork 的修改（2026 起）同样以 MIT License 发布，版权归 **DuRuofu** 所有。
+
+使用、修改、再分发请保留上述版权声明。
