@@ -1,4 +1,5 @@
 import { Modal, App } from 'obsidian';
+import { t } from './i18n';
 
 export class LogsModal extends Modal {
     textToView: string;
@@ -15,7 +16,7 @@ export class LogsModal extends Modal {
         // Header
         const headerWrapper = contentEl.createEl('div');
         headerWrapper.addClass('unused-images-center-wrapper');
-        const headerEl = headerWrapper.createEl('h1', { text: 'Clear Unused Images - Logs' });
+        const headerEl = headerWrapper.createEl('h1', { text: t('Clear Unused Images - Logs', '清理未使用图片 - 日志') });
         headerEl.addClass('modal-title');
 
         // Information to show
@@ -26,7 +27,7 @@ export class LogsModal extends Modal {
         // Close Button
         const buttonWrapper = contentEl.createEl('div');
         buttonWrapper.addClass('unused-images-center-wrapper');
-        const closeButton = buttonWrapper.createEl('button', { text: 'Close' });
+        const closeButton = buttonWrapper.createEl('button', { text: t('Close', '关闭') });
         closeButton.addClass('unused-images-button');
         closeButton.addEventListener('click', () => {
             myModal.close();

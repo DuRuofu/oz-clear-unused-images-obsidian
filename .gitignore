@@ -15,3 +15,6 @@ data.json
 
 
 .DS_Store
+
+# local npm cache used to work around a root-owned global cache
+.npm-cache

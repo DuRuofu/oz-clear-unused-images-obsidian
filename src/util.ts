@@ -1,6 +1,8 @@
 import { App, TFile } from 'obsidian';
 import OzanClearImages from './main';
 import { getAllLinkMatchesInFile, LinkMatch } from './linkDetector';
+import { collectRawRefsInText, isTextLikeExtension } from './refResolver';
+import { t } from './i18n';
 
 /* ------------------ Image Handlers  ------------------ */
 
@@ -63,6 +65,8 @@ const getAttachmentPathSetForVault = async (app: App): Promise<Set<string>> => {
         let obsFile = allFiles[i];
         // Check Frontmatter for md files and additional links that might be missed in resolved links
         if (obsFile.extension === 'md') {
+            // Read the file once and reuse the text for every later check
+            let fileText = await readFileText(obsFile, app);
             // Frontmatter
             let fileCache = app.metadataCache.getFileCache(obsFile);
             if (fileCache.frontmatter) {
@@ -81,16 +85,26 @@ const getAttachmentPathSetForVault = async (app: App): Promise<Set<string>> => {
                     }
                 }
             }
+            // Raw text references (HTML tags, CSS url(), srcset, YAML paths, ...)
+            collectRawRefsInText(fileText, obsFile.path, app, attachmentsSet);
             // Any Additional Link
-            let linkMatches: LinkMatch[] = await getAllLinkMatchesInFile(obsFile, app);
+            let linkMatches: LinkMatch[] = await getAllLinkMatchesInFile(obsFile, app, fileText);
             for (let linkMatch of linkMatches) {
                 addToSet(attachmentsSet, linkMatch.linkText);
             }
         }
         // Check Canvas for links
         else if (obsFile.extension === 'canvas') {
-            let fileRead = await app.vault.cachedRead(obsFile);
-            let canvasData = JSON.parse(fileRead);
+            let fileRead = await readFileText(obsFile, app);
+            // Raw text references first: canvas cards may contain HTML/img tags
+            collectRawRefsInText(fileRead, obsFile.path, app, attachmentsSet);
+            let canvasData;
+            try {
+                canvasData = JSON.parse(fileRead);
+            } catch (e) {
+                console.error('Clear Unused Images: failed to parse canvas file ' + obsFile.path, e);
+                continue;
+            }
             if (canvasData.nodes && canvasData.nodes.length > 0) {
                 for (const node of canvasData.nodes) {
                     // node.type: 'text' | 'file'
@@ -105,8 +119,26 @@ const getAttachmentPathSetForVault = async (app: App): Promise<Set<string>> => {
                 }
             }
         }
+        // Any other text-like file can also reference attachments (HTML, CSS, JSON, ...)
+        else if (isTextLikeExtension(obsFile.extension)) {
+            let fileText = await readFileText(obsFile, app);
+            collectRawRefsInText(fileText, obsFile.path, app, attachmentsSet);
+        }
     }
     return attachmentsSet;
+};
+
+/**
+ * 读文件原文。读取失败时返回空串并记日志：扫描会少一路引用来源，
+ * 但不会因为一个坏文件就中断整次扫描。
+ */
+const readFileText = async (file: TFile, app: App): Promise<string> => {
+    try {
+        return await app.vault.cachedRead(file);
+    } catch (e) {
+        console.error('Clear Unused Images: failed to read ' + file.path, e);
+        return '';
+    }
 };
 
 const pathIsAnImage = (path: string) => {
@@ -130,13 +162,13 @@ export const deleteFilesInTheList = async (
         } else {
             if (deleteOption === '.trash') {
                 await app.vault.trash(file, false);
-                textToView += `[+] Moved to Obsidian Trash: ` + file.path + '</br>';
+                textToView += `[+] ` + t('Moved to Obsidian Trash: ', '已移至 Obsidian 回收站：') + file.path + '</br>';
             } else if (deleteOption === 'system-trash') {
                 await app.vault.trash(file, true);
-                textToView += `[+] Moved to System Trash: ` + file.path + '</br>';
+                textToView += `[+] ` + t('Moved to System Trash: ', '已移至系统回收站：') + file.path + '</br>';
             } else if (deleteOption === 'permanent') {
                 await app.vault.delete(file);
-                textToView += `[+] Deleted Permanently: ` + file.path + '</br>';
+                textToView += `[+] ` + t('Deleted Permanently: ', '已永久删除：') + file.path + '</br>';
             }
             deletedImages++;
         }
